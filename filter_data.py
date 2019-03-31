@@ -28,7 +28,7 @@ for passage in all_passages:
     paragraphs_to_keep = []
     len_so_far = 0
     for paragraph in paragraphs:
-        if len(paragraph) + len_so_far < 3000:
+        if len(paragraph) + len_so_far < 2000:
             paragraphs_to_keep.append(paragraph)
             len_so_far += len(paragraph)
         else:
