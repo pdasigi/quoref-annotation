@@ -3,6 +3,7 @@ import sys
 import csv
 import json
 
+import spacy
 import ftfy
 
 argparser = argparse.ArgumentParser("Take summaries from NarrativeQA, and truncate "
@@ -14,6 +15,43 @@ argparser.add_argument('--data-path', type=str,
 argparser.add_argument('--output-path', type=str,
                        help=("Path to JSON file of passages to write out."), required=True)
 args = argparser.parse_args()
+
+nlp = spacy.load("en")
+
+def remove_actor_names(passage):
+    """
+    Some of the passages in NarrativeQA are summaries of movie plots, and have the actor names in
+    them. We do not want annotators to write questions about those names, so we remove them here.
+    Actor names mostly occur in parantheses right next to character names. We use a high precision
+    pattern here to identify them. The recall is not expected to be perfect, but good enough.
+    """
+    doc = nlp(passage)
+    all_actor_names = []
+    start_index = None
+    keep_track = False
+    for i, word in enumerate(doc):
+        if i != 0 and doc[i-1].pos_ in ["PROPN", "NOUN"] and  word.lemma_ == "(":
+            start_index = word.idx
+            keep_track = True
+        elif keep_track:
+            if word.lemma_ != ")":
+                # All the words within the actor's name should be proper nouns, punctuation (e.g. hyphens),
+                # or adpositions (e.g. de)
+                if word.pos_ not in ["PROPN", "ADP", "PUNCT"]:
+                    start_index = None
+                    keep_track = False
+            else:
+                end_index = word.idx
+                # We start at start_index - 1 because we also want to get the space before the
+                # actor's name, which also needs to be removed.
+                assert passage[start_index-1] == " "
+                actor_name = passage[start_index - 1 : end_index + 1]
+                all_actor_names.append(actor_name)
+                temp_buffer = []
+                keep_track = False
+    for actor_name in all_actor_names:
+        passage = passage.replace(actor_name, "")
+    return passage
 
 
 # Assuming this file is the one with summaries from the NarrativeQA dataset
@@ -33,7 +71,8 @@ for passage in all_passages:
             len_so_far += len(paragraph)
         else:
             break
-    filtered_passages.append("\n".join(paragraphs_to_keep))
+    filtered_passage = remove_actor_names("\n".join(paragraphs_to_keep))
+    filtered_passages.append(filtered_passage)
 
 json_output = {"passages": filtered_passages}
 
