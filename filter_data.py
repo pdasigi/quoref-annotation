@@ -6,9 +6,7 @@ import json
 import spacy
 import ftfy
 
-argparser = argparse.ArgumentParser("Take summaries from NarrativeQA, and truncate "
-                                    "them until a paragraph boundary, such that there "
-                                    "are at most 3000 characters in the passage.")
+argparser = argparse.ArgumentParser("Take summaries from NarrativeQA and process them")
 argparser.add_argument('--data-path', type=str,
                        help=("Path to CSV file with summaries from the NarrativeQA "
                              "dataset."), required=True)
@@ -23,7 +21,8 @@ def remove_actor_names(passage):
     Some of the passages in NarrativeQA are summaries of movie plots, and have the actor names in
     them. We do not want annotators to write questions about those names, so we remove them here.
     Actor names mostly occur in parantheses right next to character names. We use a high precision
-    pattern here to identify them. The recall is not expected to be perfect, but good enough.
+    pattern here to identify them. The recall is not expected to be perfect, but ishould be good
+    enough.
     """
     doc = nlp(passage)
     all_actor_names = []
